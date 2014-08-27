@@ -1,6 +1,8 @@
 package com.example.qrscannercode.app;
 
 import android.app.Fragment;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.JsonReader;
 import android.util.Log;
@@ -34,6 +36,13 @@ public class QRDataFragment extends Fragment
     }
 
     @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+
+        // Always call the superclass so it can save the view hierarchy state
+        super.onSaveInstanceState(savedInstanceState);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         rootView = inflater.inflate(R.layout.drawer_list_item_data, container, false);
@@ -46,10 +55,27 @@ public class QRDataFragment extends Fragment
                 if (content != null && !content.isEmpty()) {
                     TextView text = (TextView) rootView.findViewById(R.id.content);
                     text.setText(content);
-                }
 
-                // DO JSON Parsing
-                ParseJSONThread(content);
+                    // Determine if there is Internet
+                    ConnectivityManager cm = (ConnectivityManager)getActivity().getSystemService(getActivity().CONNECTIVITY_SERVICE);
+
+                    NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                    boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+
+                    if (isConnected) {
+                        ParseJSONThread(content);
+                    }
+                    else
+                    {
+                        TextView errorText = (TextView) rootView.findViewById(R.id.content);
+                        errorText.setText(R.string.error_no_internet);
+                    }
+                }
+                else
+                {
+                    TextView errorText = (TextView) rootView.findViewById(R.id.content);
+                    errorText.setText(R.string.error_nothing_scanned);
+                }
             }
         }
 
@@ -68,7 +94,6 @@ public class QRDataFragment extends Fragment
                 WebService(_content);
 
                 final String ERROR = error;
-
 
                 handler.post(new Runnable() {
                     @Override

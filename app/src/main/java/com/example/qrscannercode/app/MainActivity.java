@@ -23,9 +23,20 @@ public class MainActivity extends ActionBarActivity {
     private String[] mOptions;
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
-    private IntentResult scanResult;
+    private int state = 0;
+    private String urlString = "";
 
     public static final int REQUEST_CODE = 0x0000c0de;
+
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+
+        if (urlString != null) {
+            savedInstanceState.putString("CONTENT", urlString);
+        }
+        savedInstanceState.putInt("STATE", state);
+
+        super.onSaveInstanceState(savedInstanceState);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +50,14 @@ public class MainActivity extends ActionBarActivity {
         mDrawerList.setAdapter(new ArrayAdapter<String>(this, R.layout.drawer_list_item, mOptions));
         mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
 
-        selectItem(0);
+        if (savedInstanceState != null) {
+            state = savedInstanceState.getInt("STATE");
+            urlString = savedInstanceState.getString("CONTENT");
+
+            savedInstanceState.clear();
+        }
+
+        selectItem(state);
     }
 
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
@@ -53,6 +71,8 @@ public class MainActivity extends ActionBarActivity {
 
         if (position == 0) {
 
+            state = 0;
+
             QRScannerFragment rFragment = new QRScannerFragment();
 
             FragmentManager fragmentManager = getFragmentManager();
@@ -64,14 +84,13 @@ public class MainActivity extends ActionBarActivity {
 
         else if (position == 1) {
 
+            state = 1;
+
             Fragment dataFragment = new QRDataFragment();
 
             Bundle args = new Bundle();
-            if (scanResult != null)
-            {
-                args.putString("CONTENT", scanResult.getContents());
-                dataFragment.setArguments(args);
-            }
+            args.putString("CONTENT", urlString);
+            dataFragment.setArguments(args);
 
             FragmentManager fragmentManager = getFragmentManager();
             fragmentManager.beginTransaction().replace(R.id.content_frame, dataFragment).commit();
@@ -87,7 +106,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
         if (scanResult != null) {
             if (requestCode == REQUEST_CODE) {
                 if (resultCode == Activity.RESULT_OK) {
@@ -95,6 +114,8 @@ public class MainActivity extends ActionBarActivity {
                     String formatName = intent.getStringExtra("SCAN_RESULT_FORMAT");
                     byte[] rawBytes = intent.getByteArrayExtra("SCAN_RESULT_BYTES");
                     int intentOrientation = intent.getIntExtra("SCAN_RESULT_ORIENTATION", Integer.MIN_VALUE);
+
+                    urlString = intent.getStringExtra("SCAN_RESULT");
                 }
             }
         }
